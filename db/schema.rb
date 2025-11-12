@@ -10,14 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_11_12_072916) do
+ActiveRecord::Schema[8.1].define(version: 2025_11_12_073559) do
   create_table "messages", force: :cascade do |t|
     t.text "content", null: false
     t.datetime "created_at", null: false
     t.integer "room_id", null: false
     t.datetime "updated_at", null: false
     t.string "user_name", null: false
-    t.index ["room_id", "created_at"], name: "index_messages_on_room_id_and_created_at"
     t.index ["room_id"], name: "index_messages_on_room_id"
   end
 
