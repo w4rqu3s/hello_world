@@ -1,0 +1,14 @@
+<h1>Sala: <%= @room.name %></h1>
+<div data-controller="chat" data-chat-room-id-value="<%= @room.id %>">
+  <div id="messages" style="border:1px solid #ccc;height:300px;overflow:auto;padding:8px;">
+    <% @messages.each do |m| %>
+      <div><strong><%= m.user_name %></strong>: <%= m.content %></div>
+    <% end %>
+  </div>
+
+  <%= form_with url: room_messages_path(@room), method: :post, data: { turbo_stream: true } do |f| %>
+    <%= f.text_field :user_name, placeholder: "Seu nome" %>
+    <%= f.text_field :content, placeholder: "Mensagem" %>
+    <%= f.submit "Enviar" %>
+  <% end %>
+</div>

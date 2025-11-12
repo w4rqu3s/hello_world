@@ -1,0 +1,9 @@
+<h1>Salas</h1>
+
+<ul id="rooms-list">
+  <% @rooms.each do |room| %>
+    <li><%= link_to room.name, room_path(room) %></li>
+  <% end %>
+</ul>
+
+<%= link_to "Criar nova sala", new_room_path %>
