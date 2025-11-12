@@ -1,14 +1,80 @@
 <h1>Sala: <%= @room.name %></h1>
-<div data-controller="chat" data-chat-room-id-value="<%= @room.id %>">
-  <div id="messages" style="border:1px solid #ccc;height:300px;overflow:auto;padding:8px;">
+<p><%= link_to "Voltar", rooms_path %></p>
+
+<div id="chat">
+  <div id="messages" style="border:1px solid #ccc; height: 350px; overflow:auto; padding:8px;">
     <% @messages.each do |m| %>
-      <div><strong><%= m.user_name %></strong>: <%= m.content %></div>
+      <div class="message" data-message-id="<%= m.id %>">
+        <strong><%= h m.user_name %></strong> <small>(<%= m.created_at.strftime("%H:%M:%S") %>)</small>:
+        <div><%= simple_format(h m.content) %></div>
+      </div>
     <% end %>
   </div>
 
-  <%= form_with url: room_messages_path(@room), method: :post, data: { turbo_stream: true } do |f| %>
-    <%= f.text_field :user_name, placeholder: "Seu nome" %>
-    <%= f.text_field :content, placeholder: "Mensagem" %>
-    <%= f.submit "Enviar" %>
-  <% end %>
+  <div id="composer" style="margin-top:8px;">
+    <form id="new_message" action="<%= room_messages_path(@room) %>" method="post">
+      <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
+      <div>
+        <label>Apelido</label>
+        <input id="user_name" name="message[user_name]" value="<%= cookies.signed[:user_name] || '' %>" required>
+      </div>
+      <div>
+        <label>Mensagem</label>
+        <textarea id="content" name="message[content]" rows="2" required></textarea>
+      </div>
+      <button type="submit">Enviar</button>
+    </form>
+  </div>
 </div>
+
+<%= javascript_include_tag "application", "data-turbo-track": "reload" %>
+<script type="module">
+  import { subscribeToRoom } from "/assets/room_channel_subscriber.js"
+
+  (function() {
+    const roomId = <%= @room.id %>;
+    const messagesContainer = document.getElementById('messages');
+
+    function appendMessage(data) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message';
+      wrapper.dataset.messageId = data.id;
+      wrapper.innerHTML = `<strong>${escapeHtml(data.user_name)}</strong> <small>(${data.created_at})</small>:<div>${escapeHtml(data.content).replace(/\n/g, '<br>')}</div>`;
+      messagesContainer.appendChild(wrapper);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      if(!str) return '';
+      return str.replace(/[&<>"']/g, function(m) {
+        return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' })[m];
+      });
+    }
+
+    // subscrição via ActionCable
+    const subscription = subscribeToRoom(roomId, function(data) {
+      appendMessage(data);
+    });
+
+    const form = document.getElementById('new_message');
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': formData.get('authenticity_token') },
+        body: formData
+      }).then(response => {
+        if (response.ok) {
+          document.getElementById('content').value = '';
+        } else {
+          response.json().then(j => alert("Erro: " + (j.errors || j)));
+        }
+      }).catch(err => alert("Erro de rede: " + err));
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (subscription && subscription.unsubscribe) subscription.unsubscribe();
+    });
+  })();
+</script>
