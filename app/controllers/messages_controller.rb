@@ -7,6 +7,10 @@ class MessagesController < ApplicationController
     else
       render json: { errors: @message.errors.full_messages }, status: :unprocessable_entity
     end
+
+    ActionCable.server.broadcast room,
+      message: message.content,
+      user: message.user_name
   end
 
   private
